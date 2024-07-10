@@ -1,0 +1,7 @@
+In the model_train.py file, you can change the range of data the model is trained on.
+Interestingly, for large values of training samples, the accuracy is high, but the certainty becomes lower.
+For example, for matrix of shape (5,5), we have the following approximate results for number of samples (num), for which the certainty is greater than 95 % (n), and the resulting accuracy (a):
+    - num = 500 -> n ≈ 2 %, a = 1
+    - num = 300 -> n ≈ 4 %, a = 1
+    - num = 100 -> n ≈ 8 %, a ≈ 1
+    - num = 30 -> n ≈ 10 %, a ≈ 0.8

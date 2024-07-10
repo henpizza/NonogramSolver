@@ -1,4 +1,4 @@
 # NonogramSolver
 
-This version of the project does not work correctly.
-It is being preserved for further possible testing purposes.
+The first somewhat working example.
+Is able to find the correct label for one field in a fraction of cases (typically around 1/20-1/10) for a 5x5 nonogram.
