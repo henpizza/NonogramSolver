@@ -1,18 +1,12 @@
 #!/usr/bin/env python3
-"""
-Created on Wed Jul 10 11:05:13 2024
-"""
 
-import pandas as pd
-from os import chdir,getcwd
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import precision_score
-from sklearn.preprocessing import MinMaxScaler
-import matplotlib.pyplot as plt
-from itertools import product
+
 import numpy as np
-from contextlib import suppress
-from itertools import product,groupby
+import pandas as pd
+
+from itertools import groupby,product
+from os import chdir,getcwd,makedirs
+from os.path import exists
 from random import choice
 
 
@@ -25,9 +19,19 @@ COL_ID = 0
 
 
 class NonogramFrame(pd.DataFrame):
+    '''
+    The class creates a pandas.DataFrame with the following columns:
+        - row/col_i_total - The total number of filled fields in row/column i.
+        - row/col_i_spaces - The total number of spaces 
+
+    Parameters
+    ----------
+    shape : tuple
+        Shape of the nonogram. The initializer expects a 2-tuple in the form (num_of_rows,num_of_cols).
+
+    '''
     def __init__(self, shape: tuple):
-        super().__init__(columns = (
-                                       ))
+        super().__init__(columns = ())
         for k in range(1,shape[0]+1):
             self['row_' + str(k) + '_total'] = np.nan
             self['row_' + str(k) + '_spaces'] = np.nan
@@ -35,12 +39,38 @@ class NonogramFrame(pd.DataFrame):
             self['col_' + str(k) + '_total'] = np.nan
             self['col_' + str(k) + '_spaces'] = np.nan
             
-        self['target'] = np.nan
+class TargetFrame(pd.DataFrame):
+    '''
+    The class creates a pandas.DataFrame with the following columns:
+        - target_i_j - The target in the row i and column j.
 
+    Parameters
+    ----------
+    shape : tuple
+        Shape of the nonogram. The initializer expects a 2-tuple in the form (num_of_rows,num_of_cols).
 
-def convert_generated_data_to_nonogram_frame(filename_list: list, shape: tuple, entry_coord: tuple):
-    '''Jestli tohle bude fungovat, musis to predelat.'''
-    
+    '''
+    def __init__(self, shape: tuple):
+        super().__init__(columns = ())
+        for i,j in product(range(1,shape[0]+1),range(1,shape[1]+1)):
+                self['target_' + str(i) + '_' + str(j)] = np.nan
+
+            
+
+def convert_to_nonogram_frame(filename_list: list, shape: tuple) -> NonogramFrame:
+    '''
+    Parameters
+    ----------
+    filename_list : list
+        List of files with the str datatype.
+    shape : tuple
+        Shape of the nonogram. The function expects a 2-tuple in the form (num_of_rows,num_of_cols).
+
+    Returns
+    -------
+    NonogramFrame
+
+    '''
     cur_dir = getcwd()
     chdir("data")
     
@@ -51,15 +81,12 @@ def convert_generated_data_to_nonogram_frame(filename_list: list, shape: tuple, 
     row_spaces = [[] for _ in range(shape[0])]
     col_total = [[] for _ in range(shape[1])]
     col_spaces = [[] for _ in range(shape[1])]
-    target_list = []
     
     for filename in filename_list:
         rows = []
         cols = []
         
-        with open(f'{filename}.dat','r') as file:
-            file.readline()
-            file.readline()
+        with open(filename,'r') as file:
             while('-' not in (inp := file.readline())):
                 if (len(inp) > 1):
                     rows.append(list(map(int,inp.split(','))))
@@ -71,10 +98,6 @@ def convert_generated_data_to_nonogram_frame(filename_list: list, shape: tuple, 
                 else:
                     cols.append([0])
                         
-        nonogram_target = np.loadtxt(f'{filename}.target',dtype=int)
-        
-        row = entry_coord[0]-1
-        col = entry_coord[1]-1
         
         for k in range(0,shape[0]):
             row_total[k].append(sum(rows[k]))
@@ -83,27 +106,71 @@ def convert_generated_data_to_nonogram_frame(filename_list: list, shape: tuple, 
             col_total[k].append(sum(cols[k]))
             col_spaces[k].append(len(cols[k]))
             
-        target_list.append(nonogram_target[row,col])
-
     for k in range(0,shape[0]):
         data['row_' + str(k+1) + '_total'] = row_total[k]
         data['row_' + str(k+1) + '_spaces'] = row_spaces[k]
     for k in range(0,shape[1]):
         data['col_' + str(k+1) + '_total'] = col_total[k] 
         data['col_' + str(k+1) + '_spaces'] = col_spaces[k]
-    data['target'] = target_list
 
     chdir(cur_dir)
     
     return data
 
 
+def convert_to_target_frame(filename_list: list, shape: tuple) -> TargetFrame:
+    '''
+    Parameters
+    ----------
+    filename_list : list
+        List of files with the str datatype.
+    shape : tuple
+        Shape of the nonogram. The function expects a 2-tuple in the form (num_of_rows,num_of_cols).
+
+    Returns
+    -------
+    TargetFrame
+
+    '''
+    cur_dir = getcwd()
+    chdir("data")
+    
+    target = TargetFrame(shape)
+    
+    for filename in filename_list:
+        nonogram_target = np.loadtxt(filename,dtype=int)
+        nonogram_target = pd.DataFrame([nonogram_target.flatten()],
+                                       columns=list(target))
+        target = pd.concat([target,nonogram_target],copy=False,ignore_index=True)
+            
+    
+    target = target.astype(int) # pd.concat converts int to float for some reason
+
+    chdir(cur_dir)
+
+    return target
 
 
 
+def nonogram_data_generate(shape: tuple, num: int = 500) -> None:
+    '''
+    Generates num nonograms with shape[0] rows and shape[1] columns.
 
+    Parameters
+    ----------
+    shape : tuple
+        Shape of the nonogram. The function expects a 2-tuple in the form (num_of_rows,num_of_cols).
+    num : int, optional
+        The number of nonograms to generate. The default is 500.
 
-def nonogram_data_generate(shape: tuple, num: int = 500):
+    Returns
+    -------
+    None.
+
+    '''
+    if not exists('data'):
+        makedirs('data')
+        
     cur_dir = getcwd()
     chdir("data")
     for n in range(num):
@@ -129,9 +196,7 @@ def nonogram_data_generate(shape: tuple, num: int = 500):
             result = [sum(1 for _ in group) for label, group in groups if label == FILLED]
             columns_out.append(result)
         
-        with open(f"{n+1}.dat","w") as out:
-            print(f'{rows},{columns}',file=out)
-            print('-',file=out)
+        with open(f"{n+1}.non","w") as out:
             for row in rows_out:
                 print(*row,sep=',',file=out)
             print('-',file=out)
@@ -143,3 +208,30 @@ def nonogram_data_generate(shape: tuple, num: int = 500):
             np.savetxt(out,nonogram,fmt="%i")
     chdir(cur_dir)
     
+def convert_generated_data_to_data_frames(filename_list: list, shape: tuple) -> (NonogramFrame,TargetFrame):
+    '''
+    A convenience function transforming generated nonograms (see also nonogram_data_generate)
+    into pandas.DataFrame tables (or more precisely, its subclasses NonogramFrame and TargetFrame).
+    
+    Parameters
+    ----------
+    filename_list : list
+        List of indices indicating which files generated by nonogram_data_generate to process.
+    shape : tuple
+        Shape of the nonogram. The function expects a 2-tuple in the form (num_of_rows,num_of_cols).
+
+    Returns
+    -------
+    (NonogramFrame,TargetFrame) : tuple
+        
+    '''
+    nonogram_frame_filename_list = ['a'] * len(filename_list)
+    target_frame_filename_list = ['a'] * len(filename_list)
+    for k in range(len(filename_list)):
+        nonogram_frame_filename_list[k] = f'{filename_list[k]}.non'
+        target_frame_filename_list[k] = f'{filename_list[k]}.target'
+        
+    nonogram_frame = convert_to_nonogram_frame(nonogram_frame_filename_list, shape)
+    target_frame = convert_to_target_frame(target_frame_filename_list, shape)
+    
+    return (nonogram_frame,target_frame)
