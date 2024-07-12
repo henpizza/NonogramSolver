@@ -5,15 +5,37 @@ Alpha version.
 
 
 ## The algorithm
-Based on the total number of filled fields and the number of spaces, make a LogisticRegression model for each field and predict, whether a field has a one or a zero.
+Based on the total number of filled fields and the number of spaces, make a LogisticRegression model for each field and predict whether a field has a one or a zero.
 Afterwards, repeat this procedure with the already guessed fields until the entire nonogram is filled.
+
+When the model is highly uncertain about what to fill in next, nonogram_guessing_test terminates prematurely.
 
 Currently only the testing phase is implemented.
 
 ### Results
-For a 5x5 nonogram a model can for one field and in about 5% predict with almost 100% accuracy the correct value. Only values where the likelihood is greater than 95% were predicted. The models were trained on 100 samples.
+- Some nonograms (even 5x5 nonograms) are unsolvable with the current approach.
+The hyperparameters that have achieved the best results so far for 5x5 nonograms are
+```
+    num = 150
+    train_test_split = 100
+    default_decision_boundary = 0.98
+    min_decision_boundary = 0.9
+    decision_boundary_decrement = 0.01
+    default_accuracy_decision_boundary = 0.99
+    accuracy_decision_boundary_decrement = 0.005
+    cv_min_num_decided = 2
+```
+Also, StandardScaler is used instead of MinMaxScaler.
 
-The models are unable at the current stage to guess an entire nonogram correctly in a large number of cases. Possible solutions might be a different standardisation/normalisation or cross-validation of the models before predicting the answer.
+- Large nonograms (like 10x10) are never guessed entirely correctly. The reason might be inappropriate hyperparameters.
+
+- Cross-validating does not seem to necessarily help.
+
+- The number of training samples is crucial.
+Make it too large and the models are slow and unsure.
+Make it too small and the models are inaccurate.
+
+Conclusion_: a different approach is requisite.
 
 
 
@@ -21,9 +43,9 @@ The models are unable at the current stage to guess an entire nonogram correctly
 
 - Try to think out more features.
 
-- Try generating a nonogram with a fixed number of spaces. Perhaps with another machine learning model.
+- Try generating nonograms with a fixed number of spaces. Perhaps with another machine learning model.
 
-- Try normalisation/standardisation.
+- Test normalisation/standardisation.
 
 - Test the algorithm with nonograms of various shapes.
 
@@ -33,7 +55,7 @@ The models are unable at the current stage to guess an entire nonogram correctly
 
 - (Possibly) wrap all models from step 1 into one model. Would be more memory-demanding, but perhaps easier to use.
 
-- I might have to make default parameters and perhaps default 'degrees of carefulness'.
+- I might have to make default parameters and perhaps default 'degrees of carefulness' that set those parameters automatically.
 
 - The models might have to be cross-validated.
 
@@ -53,5 +75,6 @@ Although the previous answer explains this at least in part, there is another re
 
 ## Other notes and issues
 Interestingly, the chosen scaler (MinMaxScaler or StandardScaler) and the feature_range parameter influence the results to a large degree. For example, LogisticRegression refuses to converge with feature_range = (0,1).
+StandardScaler seems more successful so far.
 
 Should the models be cross-validated during the classification?
