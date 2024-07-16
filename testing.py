@@ -3,6 +3,7 @@ import numpy as np
 from auxiliary_module import convert_to_nonogram_frame,generate_nonogram_data
 from auxiliary_module import DATA_DIRECTORY,NONOGRAM_FILENAME_EXTENSION,TARGET_FILENAME_EXTENSION
 
+
 def generate_testing_sample(shape: tuple) -> tuple[str,np.array]:
     """
     Generate a testing sample and return the 
