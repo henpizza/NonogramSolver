@@ -15,6 +15,15 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import MinMaxScaler,StandardScaler
 
+
+
+# Adding parent directory to path
+import os
+import sys
+current_dir = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current_dir)
+sys.path.append(parent)
+
 from auxiliary_module import convert_generated_data_to_data_frames,generate_nonogram_data,make_empty_nonogram
 from testing import generate_testing_sample
 
