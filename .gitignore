@@ -3,3 +3,5 @@ __pycache__
 .idea
 possibly_useless
 .ipynb_checkpoints
+testing_scripts/model.keras
+throwaway.py

@@ -25,7 +25,7 @@ parent = os.path.dirname(current_dir)
 sys.path.append(parent)
 
 from auxiliary_module import convert_generated_data_to_data_frames,generate_nonogram_data,make_empty_nonogram
-from testing import generate_testing_sample
+from auxiliary_module.testing import generate_testing_sample
 
 
 shape = (5,5)

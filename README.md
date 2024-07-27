@@ -1,16 +1,24 @@
 # NonogramSolver
 
-Pre-alpha version.
+Pre-alpha version (commit no. 10).
+Currently only the testing phase is implemented.
+
+
+The results gained so far with neural networks are preliminary and the scripts might be in need of some refactoring,
+but the changes are becoming unmanadgeable, so a commit was made.
 
 
 
-## The algorithm (file `logistic_regression_test.py` ([here](testing_scripts/logistic_regression_test.py)))
-Based on the total number of filled fields and the number of spaces, make a LogisticRegression model for each field and predict whether a field has a one or a zero.
+## Logistic regression and other relevant information
+for `logistic_regression_test.py` [here](testing_scripts/logistic_regression_test.py)
+
+### The algorithm
+Based on the total number of filled fields and the number of spaces,
+make a LogisticRegression model for each field and predict whether a field has a one or a zero.
 Afterwards, repeat this procedure with the already guessed fields until the entire nonogram is filled.
 
 When the model is highly uncertain about what to fill in next, `logistic_regression_test` terminates prematurely.
 
-Currently only the testing phase is implemented.
 
 ### Results
 - Some nonograms (even 5x5 nonograms) are unsolvable with the current approach.
@@ -49,10 +57,65 @@ a predict_proba method is needed in order to fill only the fields a model can be
 Although SVM provides one such method, it is very slow and unreliable.
 (Scikit-learn computes it through cross-validation as of 2024.)
 
-- All the features I have so far are needed.
-
 - Random forests do not seem to perform well,
 but more tweaking and testing is in order.
+
+
+
+
+## Neural networks
+Thanks to the complexity of neural networks and the simplicity of the Keras API,
+I was allowed a bigger diversity of approaches.
+(The Keras API is more convenient than scikit-learn API for multidimensional output.)
+
+What I have tried so far:
+- [Guessing one field per iteration](testing_scripts/nn_keras_field_test_one_field.py):
+  Always make the most auspicious guess and then retrain the model.
+- [Guessing fields with high enough certainty](testing_scripts/nn_keras_field_test_proba.py):
+  Similar to the previous one, but faster (although possibly less accurate).
+- [Simply training a model until accuracy is high enough](testing_scripts/nn_keras_field_test_simple.py):
+  Try to guess the entire nonogram in one go.
+
+### Results:
+More experimenting is needed.
+The training process is more involved than I expected.
+Any conclusions made here will probably be inaccurate.
+
+- Number of layers is very important.
+Just by adding one layer, the accuracy dropped by 6%
+(measured during the 100th epoch of training.)
+Could this be caused by vanishing gradients?
+I thought that with 3 layers it would not be as prominent.
+
+- Using NonogramFrame v2 with padding did work,
+maybe even better than the first version,
+which was surprising to me,
+since the model has no conscious awareness of what the parameters mean
+and padding should, I think,
+be confusing to the first few parameters.
+That is because the same number might appear in the first position
+regardless of the amount of padding.
+
+- The probability output by the sigmoid function might not be reliable.
+
+
+_Addendum_:
+  In commit no. 9 I wrote:
+>  When a LogisticRegression model is unsure,
+>  a more powerful model such as a neural network might be helpful.
+>  But it would also be much slower.
+and
+> With a neural network, I could maybe use one model for the entire nonogram.
+I must state that the neural networks are much faster than I expected them to be
+(if they are not too complex, that is.)
+I have to wait a similar amount of time on my computer as with the logistic regression.
+  As for the second point,
+that might be correct.
+
+
+## Results not dependent on the model used:
+- All the features I have so far are needed.
+(See the next point about PCA and [this file](data_analysis/correlations.py).)
 
 - PCA was not very successful.
 The number of components that needs to be preserved for high variance is large.
@@ -61,67 +124,71 @@ See [here](plots/pca_test_50x50.png) or [here](plots/pca_test_10x25.png).
 
 
 
+## Current objectives or ideas
 
+**Common to all models**
 
-
-
-## Current objectives
-
-- Try to think out more features.
+- Using numba to speed up things. This might not be compatible with pandas.
 
 - Try generating nonograms with a fixed number of spaces. Perhaps with another machine learning model.
 
 - Test normalisation/standardisation.
 
 - Test the algorithm with nonograms of various shapes.
-A sane objective should be that the nonogram works on shapes ~50x50.
-
-- The number of training samples, maximal number of guesses per iteration and the decision boundary (in this case the boundary, after which we insert a 0 or a 1) are hyperparameters.
-Thus I should find their optimal values, probably depending on the nonogram's shape.
-
-- Make a different model for later steps.
-
-- (Possibly) wrap all models from step 1 into one model. Would be more memory-demanding, but perhaps easier to use.
+A sane objective should be that the program works on shapes ~50x50.
 
 - I might have to make default parameters and perhaps default 'degrees of carefulness' that set those parameters automatically.
-
-- The models might have to be cross-validated,
-although I am not quite certain about this one.
-
-- (!) Try neural networks.
-
-  Formerly it was planned to be used with logistic regression:
-  When a LogisticRegression model is unsure,
-  a more powerful model such as a neural network might be helpful.
-  But it would also be much slower.
-
-  Now it appears likely that using a neural network as the primary model might be preferable.
 
 - Try ensemble learning.
 Boosting seems to be the most useful at the moment.
 
 - Try some more dimensionality reduction.
+(But fitting a manifold does not appear stable at first sight.)
 
 - (!) Gather more information about the task at hand,
 e.g. through visualization.
 
+- Maybe I should try transforming other features as well?
+
+- The NonogramFrame should be smaller if some fields were already guessed.
+There is currently a massive overhead when part of the nonogram is already filled.
+The same amount of data is generated as for an empty nonogram.
+
+
+
+**Logistic regression**:
 - I do not use the position as a feature,
 since the relationship between the position and the target is not linear.
 But what about a transformation of the feature? Like a quadratic one?
 
-- Maybe I should try transforming other features as well?
+- The models might have to be cross-validated,
+although I am not quite certain about this one.
+
+- The number of training samples, maximal number of guesses per iteration and the decision boundary
+(in this case the boundary, after which we insert a 0 or a 1) are hyperparameters.
+Thus I should find their optimal values, probably depending on the nonogram's shape.
 
 
-_Current main objective:_
-Try a neural network that depends on the position.
-I do not know momentarily how to make logistic regression work.
-With a neural network, I could maybe use one model for the entire nonogram.
+**Neural networks**:
+Just do what comes to mind.
+This includes:
+
+- Adding more layers and trying apply a correction for vanishing gradients.
+
+- Using another optimizer.
+
+- Try RNNs.
+
+- Convolutional NNs can help when dealing with large amount of data.
+But this could be unnecessary on the small scale of the data I am currently working with.
+
+- Using pretrained layers might speed up training.
 
 
 
 
 
-## Design decisions
+## Design decisions (for the LogisticRegression model)
 Here I discuss some obstacles I encountered during my attempts at solving a nonogram.
 This part's main purpose is to document why I made the program the way it is,
 so it is unnecessary for you to read it.
