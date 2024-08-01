@@ -1,12 +1,10 @@
 # NonogramSolver
 
-Pre-alpha version (commit no. 10).
+Pre-alpha version (commit no. 11).
 Currently only the testing phase is implemented.
 
 
-The results gained so far with neural networks are preliminary and the scripts might be in need of some refactoring,
-but the changes are becoming unmanadgeable, so a commit was made.
-
+The results gained so far with neural networks are preliminary.
 
 
 ## Logistic regression and other relevant information
@@ -81,7 +79,7 @@ More experimenting is needed.
 The training process is more involved than I expected.
 Any conclusions made here will probably be inaccurate.
 
-- Number of layers is very important.
+- (Verification necessary) Number of layers is very important.
 Just by adding one layer, the accuracy dropped by 6%
 (measured during the 100th epoch of training.)
 Could this be caused by vanishing gradients?
@@ -96,16 +94,29 @@ be confusing to the first few parameters.
 That is because the same number might appear in the first position
 regardless of the amount of padding.
 
-- The probability output by the sigmoid function might not be reliable.
+- (Now doubted) The probability output by the sigmoid function might not be reliable.
+
+- Normalization()'s adapt has to have numpy array as data.
+  Pandas will fail.
+
+- The loss behaves weirdly in `nn_..._one_field.py`.
+
+- `nn_..._one_field.py` is successful with small nonograms.
+
+- `nn_..._simple.py` is so far unable to guess the entire nonogram correctly.
 
 
 _Addendum_:
   In commit no. 9 I wrote:
+
 >  When a LogisticRegression model is unsure,
 >  a more powerful model such as a neural network might be helpful.
 >  But it would also be much slower.
+
 and
+
 > With a neural network, I could maybe use one model for the entire nonogram.
+
 I must state that the neural networks are much faster than I expected them to be
 (if they are not too complex, that is.)
 I have to wait a similar amount of time on my computer as with the logistic regression.
@@ -183,6 +194,9 @@ This includes:
 But this could be unnecessary on the small scale of the data I am currently working with.
 
 - Using pretrained layers might speed up training.
+I could perhaps make one large model for very large nonograms and use
+the deep layers as starting point for every smaller shape.
+But perhaps it would not be usable due to normalisation?
 
 
 
@@ -241,6 +255,14 @@ It is advised (by Aurelien Geron) to always use the same training/testing set.
 Should I do that?
 Is his situation even applicable to this project?
 His reasoning:
+
 > Over time, you (or your machine learning algorithms) will get to see the whole dataset,
 > which is what you want to avoid.
+
 Why would I even want to avoid that?
+
+I had an idea that instead of trying to make a model that guesses every field,
+I could make a model that tries to find the most auspicious field.
+It would only try to guess 1s (or 0s) and would be penalized only when the guessed field does not have a zero.
+I think this could be implemented with a softmax function, but it would probably require some conditionals
+and I have thus far been insuccessful in coding it in Keras (it might be impossible).

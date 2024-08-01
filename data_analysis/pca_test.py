@@ -28,11 +28,16 @@ parent = os.path.dirname(current_dir)
 sys.path.append(parent)
 
 from auxiliary_module import convert_generated_data_to_data_frames,generate_nonogram_data,make_empty_nonogram
+from auxiliary_module import generate_training_data,set_shape
 
 
-shape = (10,25)
+shape = (20,15)
 size = shape[0] * shape[1]
-n_dimensions = (shape[0]+shape[1])*2
+nonogram_frame_version = 2
+if nonogram_frame_version == 1:
+    n_dimensions = (shape[0]+shape[1])*2
+elif nonogram_frame_version == 2:
+    n_dimensions = int(np.ceil(shape[0]/2))*shape[1] + int(np.ceil(shape[1]/2))*shape[0]
 num = n_dimensions + 100
 # num MUST BE at least (shape[0]+shape[1])*2,
 # otherwise pca.fit()'s output will have number of dimensions
@@ -43,9 +48,19 @@ nonogram = make_empty_nonogram(shape)
 
 pca = PCA()
 
+# Uncomment for old API.
+# (And comment out the succeeding lines.)
+'''
 generate_nonogram_data(shape,num=num,template=nonogram)
+data,targets = convert_generated_data_to_data_frames(
+        range(1,num),shape,
+        nonogram_frame_version=nonogram_frame_version)
+'''
 
-data,targets = convert_generated_data_to_data_frames(range(1,num), shape)
+set_shape(shape)
+template = make_empty_nonogram()
+template[:10,:8] = np.full((10,8),1)
+data,targets = generate_training_data(10_000,template=template)
 
 # needed due to possible differences in scales
 # (although the effect would not be as pronounced in our case)

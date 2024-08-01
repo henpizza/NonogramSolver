@@ -60,7 +60,7 @@ model.add(keras.layers.Input(shape=[n_dimensions]))
 model.add(keras.layers.Dense(100))
 model.add(keras.layers.Dense(50))
 model.add(keras.layers.Dense(25,activation=keras.activations.sigmoid))
-model.compile(optimizer="sgd",
+model.compile(optimizer=keras.optimizers.Adam(),
     loss=keras.losses.BinaryCrossentropy(),
     metrics=[keras.metrics.BinaryAccuracy()])
 
