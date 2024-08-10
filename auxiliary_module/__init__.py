@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import os
 
-from collections import namedtuple
 from itertools import groupby,product
 from inspect import stack
 from numba import njit
@@ -170,6 +169,9 @@ def convert_generated_data_to_data_frames(filename_list: list, shape: tuple = No
     """
     if (shape is None):
         shape = get_shape()
+    
+    cur_dir = getcwd()
+    chdir(DATA_DIRECTORY)
 
     nonogram_frame_filename_list = ['a'] * len(filename_list)
     target_frame_filename_list = ['a'] * len(filename_list)
@@ -186,6 +188,7 @@ def convert_generated_data_to_data_frames(filename_list: list, shape: tuple = No
             raise ValueError("nonogram_frame_version must be an integer with a value between 1 and 2")
     target_frame = convert_to_target_frame(target_frame_filename_list, shape)
 
+    chdir(cur_dir)
     return (nonogram_frame,target_frame)
 
 
@@ -208,9 +211,6 @@ def convert_to_nonogram_frame2(filename_list: list, shape: tuple = None) -> Nono
     if (shape is None):
         shape = get_shape()
 
-    cur_dir = getcwd()
-    chdir(DATA_DIRECTORY)
-
     data = NonogramFrame2(shape=shape)
 
     rows = [[[] for _ in range(1,int(np.ceil(shape[1]/2))+1)] for _ in range(shape[0])]
@@ -220,7 +220,9 @@ def convert_to_nonogram_frame2(filename_list: list, shape: tuple = None) -> Nono
         with open(filename,'r') as file:
             row_ordinal = 0
             while('-' not in (inp := file.readline())):
-                if (len(inp) > 1):
+                if (len(inp) == 0): # readline returns an empty string when EOF reached
+                    raise EOFError()
+                if (len(inp) > 1): # a blank line is only '\n'
                     row_sequences = list(map(int,inp.split(',')))
                     for m,val in enumerate(row_sequences):
                         rows[row_ordinal][m].append(val)
@@ -232,7 +234,9 @@ def convert_to_nonogram_frame2(filename_list: list, shape: tuple = None) -> Nono
                 row_ordinal += 1
             col_ordinal = 0
             while('-' not in (inp := file.readline())):
-                if (len(inp) > 1):
+                if (len(inp) == 0): # readline returns an empty string when EOF reached
+                    raise EOFError()
+                if (len(inp) > 1): # a blank line is only '\n'
                     col_sequences = list(map(int,inp.split(',')))
                     for m,val in enumerate(col_sequences):
                         cols[col_ordinal][m].append(val)
@@ -250,7 +254,6 @@ def convert_to_nonogram_frame2(filename_list: list, shape: tuple = None) -> Nono
         for m in range(0,int(np.ceil(shape[0]/2))):
             data['col_' + str(col_ordinal+1) + '_' + str(m+1)] = cols[col_ordinal][m]
 
-    chdir(cur_dir)
     return data
 
 
@@ -272,9 +275,6 @@ def convert_to_nonogram_frame(filename_list: list, shape: tuple = None) -> Nonog
     """
     if (shape is None):
         shape = get_shape()
-
-    cur_dir = getcwd()
-    chdir(DATA_DIRECTORY)
 
     data = NonogramFrame(shape)
 
@@ -321,9 +321,6 @@ def convert_to_nonogram_frame(filename_list: list, shape: tuple = None) -> Nonog
         data['col_' + str(k+1) + '_spaces'] = col_spaces[k]
         #data['col_' + str(k+1) + '_max'] = col_max[k]
 
-
-    chdir(cur_dir)
-
     return data
 
 
@@ -346,9 +343,6 @@ def convert_to_target_frame(filename_list: list, shape: tuple = None) -> TargetF
     if (shape is None):
         shape = get_shape()
 
-    cur_dir = getcwd()
-    chdir(DATA_DIRECTORY)
-
     target = TargetFrame(shape=shape)
 
     for filename in filename_list:
@@ -359,8 +353,6 @@ def convert_to_target_frame(filename_list: list, shape: tuple = None) -> TargetF
 
 
     target = target.astype(int) # pd.concat converts int to float for some reason
-
-    chdir(cur_dir)
 
     return target
 
@@ -436,7 +428,8 @@ def generate_nonogram_data(shape: tuple = None, num: int = 500, template: np.arr
 
 
 @njit
-def _generate_nonogram_data_instance(shape: tuple, template: np.array = None) -> tuple[np.array,np.array]:
+def _generate_nonogram_data_instance(shape: tuple, max_num_of_sequences_in_row,max_num_of_sequences_in_column,
+    template: np.array = None) -> tuple[np.array,np.array]:
     """
     INTERNAL FUNCTION. Please use generate_training_data instead.
 
@@ -459,8 +452,8 @@ def _generate_nonogram_data_instance(shape: tuple, template: np.array = None) ->
     columns = shape[1]
 
     # Maximum number of sequences in a row/column
-    global max_num_of_sequences_in_row
-    global max_num_of_sequences_in_column
+    #global max_num_of_sequences_in_row
+    #global max_num_of_sequences_in_column
 
     if template is not None:
         nonogram = template.copy()
@@ -510,7 +503,9 @@ def _generate_nonogram_data_instance(shape: tuple, template: np.array = None) ->
 
 
 @njit
-def _generate_training_data(num:int, shape:tuple, template: np.array=None, seed: int=None) -> tuple[np.array,np.array]:
+def _generate_training_data(num:int, shape:tuple,
+    n_dimensions, size, max_num_of_sequences_in_row, max_num_of_sequences_in_column,
+    template: np.array=None, seed: int=None) -> tuple[np.array,np.array]:
     """
     INTERNAL FUNCTION. Please use generate_training_data instead.
 
@@ -531,7 +526,7 @@ def _generate_training_data(num:int, shape:tuple, template: np.array=None, seed:
     tuple[np.array,np.array]
    
     """
-    global n_dimensions,size
+    #global n_dimensions,size
     data = np.full((num,n_dimensions),0)
     targets = np.full((num,size),0)
     
@@ -539,7 +534,7 @@ def _generate_training_data(num:int, shape:tuple, template: np.array=None, seed:
     if seed is not None:
         np.random.seed(seed)
     for entry_index in range(num):
-        cur_data,answer = _generate_nonogram_data_instance(shape,template)
+        cur_data,answer = _generate_nonogram_data_instance(shape,max_num_of_sequences_in_row,max_num_of_sequences_in_column,template)
         data[entry_index] = cur_data
         targets[entry_index] = answer.flatten()
     
@@ -547,7 +542,7 @@ def _generate_training_data(num:int, shape:tuple, template: np.array=None, seed:
 
 
 
-def generate_training_data(num: int = 500, shape: tuple = None, template: np.array = None, return_pandas: bool = True, seed: int = None):
+def generate_training_data(num: int = 500, shape: tuple = None, template: np.array = None, return_pandas: bool = True, seed: int = None) -> tuple:
     """
     In contrast to generate_nonogram_data and convert_generated_data_to_nonogram_frame2,
     this function does not write to any files. Due to this, it is much faster,
@@ -567,12 +562,16 @@ def generate_training_data(num: int = 500, shape: tuple = None, template: np.arr
 
     Returns
     -------
-    tuple[np.array,np.array]
+    tuple[np.array,np.array] or tuple[NonogramFrame2,NonogramFrame2]
    
     """
     if (shape is None):
         shape = get_shape()
-    data,targets = _generate_training_data(num,shape,template,seed)
+    global n_dimensions,size,max_num_of_sequences_in_row,max_num_of_sequences_in_column
+    # Although this is inconvenient, numba does not support global variables (except on the first run)
+    data,targets = _generate_training_data(num,shape,
+        n_dimensions,size,max_num_of_sequences_in_row,max_num_of_sequences_in_column,
+        template,seed)
     if return_pandas:
         data = NonogramFrame2(data)
         targets = TargetFrame(targets)
@@ -602,6 +601,23 @@ def get_shape() -> tuple[int,int]:
         raise e
     return shape
 
+
+def get_shape_info() -> tuple[int,int]:
+    """
+    Get the number of dimensions of the input and the size of the nonogram.
+    This is primarily a convenience function so that I do not have to define these variables explicitly in every file.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    tuple[int,int]
+
+    """
+    global n_dimensions,size
+    return n_dimensions,size
 
 
 def make_empty_nonogram(shape: tuple = None) -> np.array:
@@ -647,3 +663,30 @@ def set_shape(shape_: tuple[int,int]) -> None:
     max_num_of_sequences_in_column = int(np.ceil(shape[0]/2))
     n_dimensions = max_num_of_sequences_in_row*shape[0] + max_num_of_sequences_in_column*shape[1]
 
+
+def set_shape_from_file(filename: str) -> None:
+    """
+    Set the shape based on the input file.
+    The function simply goes through the file and counts the number of rows and columns.
+
+    Parameters
+    ----------
+    filename : str
+        The filename that should be opened.
+
+    Returns
+    -------
+    None
+
+    """
+    shape = [0,0]
+    with open(filename) as f:
+        while('-' not in (inp := f.readline())):
+            if (len(inp) == 0): # readline returns an empty string when EOF reached
+                raise EOFError()
+            shape[0] += 1
+        while('-' not in (inp := f.readline())):
+            if (len(inp) == 0): # readline returns an empty string when EOF reached
+                raise EOFError()
+            shape[1] += 1
+    set_shape(tuple(shape))

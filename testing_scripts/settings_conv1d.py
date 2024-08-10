@@ -70,7 +70,8 @@ set_shape(shape)
 
 model = keras.Sequential()
 # NORMALISATION DAMAGES THE INPUT
-model.add(keras.layers.Input(shape=[n_dimensions]))
+model.add(keras.layers.Input(shape=[1,n_dimensions]))
+model.add(keras.layers.Conv1D(20,shape[0],padding="same"))
 model.add(keras.layers.Dense(500,activation=activation))
 model.add(keras.layers.Dense(size,activation=keras.activations.sigmoid))
 model.compile(
@@ -80,6 +81,7 @@ model.compile(
 
 def fit(data,target):
     data,data_val,target,target_val = train_test_split(data,target,test_size=0.1)
+    #norm_layer.adapt(data.to_numpy())
     hist = model.fit(data,target,epochs=n_epochs,
         validation_data=[data_val,target_val],
         callbacks=[

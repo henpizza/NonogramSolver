@@ -4,4 +4,7 @@ __pycache__
 possibly_useless
 .ipynb_checkpoints
 testing_scripts/model.keras
+tuner_models
+tuning/keras_tuner
 throwaway.py
+tuner_results

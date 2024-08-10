@@ -1,10 +1,13 @@
 # NonogramSolver
 
-Pre-alpha version (commit no. 11).
-Currently only the testing phase is implemented.
+Alpha version (commit no. 12).
+Please use the `main.py` file.
 
+This commit mainly adds the `keras_tuner.py` that will be used to find the best hyperparameters.
 
 The results gained so far with neural networks are preliminary.
+
+Important: normalisation damages the information contained in the data.
 
 
 ## Logistic regression and other relevant information
@@ -99,11 +102,12 @@ regardless of the amount of padding.
 - Normalization()'s adapt has to have numpy array as data.
   Pandas will fail.
 
-- The loss behaves weirdly in `nn_..._one_field.py`.
-
 - `nn_..._one_field.py` is successful with small nonograms.
 
 - `nn_..._simple.py` is so far unable to guess the entire nonogram correctly.
+
+- Simply changing the data with PCA does not influence the results significantly.
+However, no dimensionality reduction was involved, since the input dimensions would be changed.
 
 
 _Addendum_:
@@ -132,6 +136,13 @@ that might be correct.
 The number of components that needs to be preserved for high variance is large.
 That is, the function relating variance and the number of components increases slowly.
 See [here](plots/pca_test_50x50.png) or [here](plots/pca_test_10x25.png).
+
+- Normalisation damages the data.
+Almost everywhere it is said that normalisation/standardisation helps the model converge.
+But by removing normalisation I was able to achieve much better results.
+
+- There is not a one-to-one correspondence between the task and the result.
+Implication: my program might work even on bigger nonograms!
 
 
 
@@ -181,14 +192,13 @@ Thus I should find their optimal values, probably depending on the nonogram's sh
 
 
 **Neural networks**:
-Just do what comes to mind.
-This includes:
+- (!) Find the optimal parameters with the help of `keras_tuner.py`.
+
+- (!) Try the program out on a real sample.
 
 - Adding more layers and trying apply a correction for vanishing gradients.
 
 - Using another optimizer.
-
-- Try RNNs.
 
 - Convolutional NNs can help when dealing with large amount of data.
 But this could be unnecessary on the small scale of the data I am currently working with.

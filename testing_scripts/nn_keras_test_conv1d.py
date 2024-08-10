@@ -1,27 +1,14 @@
 '''
-This test was made for the commits no. 10 and 11.
-It shows the performance of a neural network with guessing the entire nonogram.
-It is similar to nn_keras_field_test_proba.py, but always guesses only a single field it is most certain about.
-(The certainty is measured by the output probability of the sigmoid function.)
+This test was made for the commit no. 12.
+It is the same as nn_..._one_field.py, but with Conv1D layer.
+If it produces better results, nn_..._one_field.py might be replaced by this file.
 
-Results:
-- Maybe it works with small nonograms.
-
-- For some unknown reason, Keras shows a very large loss after a few training sessions.
-  It has something to do with normalisation, but the culprit eludes me.
-  * The norm_adapt function always overrides the previous mean and variance.
-  * Normalising once does not help.
-  * BatchNormalisation solves the issue, but its performance is worse.
-
-- Also, even if this works correctly, the loss keeps increasing often during training.
-
-- If I do not find the cause, the only reasonable might be building the model anew.
-  I reasoned that it is superfluous to have the already guessed target values around anyways.
+It uses settings_conv1d.py file due to the different input shape.
   
 '''
 
 
-import settings as s
+import settings_conv1d as s
 from auxiliary_module import generate_training_data,make_empty_nonogram
 from auxiliary_module.testing import generate_testing_sample,reset_weights,keras_nonogram_max_proba_fill
 
@@ -32,10 +19,11 @@ import numpy as np
 
 
 
-
 test_data,answer = generate_testing_sample(nonogram_frame_version=s.nonogram_frame_version)
+test_data = test_data.to_numpy().reshape((test_data.shape[0],1,test_data.shape[1]))
 nonogram = make_empty_nonogram()
 n_to_guess = s.size
+
 
 
 try_again = True
@@ -51,9 +39,11 @@ while (try_again):
         if (n_to_guess == 0):
             break
         data,target = generate_training_data(s.num,template=nonogram,seed=s.numba_seed)
+        data = data.to_numpy().reshape((data.shape[0],1,data.shape[1]))
+        target = target.to_numpy().reshape((target.shape[0],1,target.shape[1]))
         hist = s.fit(data,target)
 
-        predict_proba = s.model.predict(test_data,verbose=0)[0]
+        predict_proba = s.model.predict(test_data,verbose=0)[0][0]
         max_row,max_col = keras_nonogram_max_proba_fill(predict_proba,nonogram)
         n_to_guess -= 1
 

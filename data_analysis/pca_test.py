@@ -1,5 +1,5 @@
 '''
-This PCA test was made for the commit no. 9.
+This PCA test was made for the commit no. 9. (Slightly revised for commit no. 12.)
 It measures whether we can project the data to a sufficiently low-dimensional subspace.
 Results: Mostly negative.
 A great amount of information needs to be lost in order to project down to a space small enough.
@@ -31,7 +31,7 @@ from auxiliary_module import convert_generated_data_to_data_frames,generate_nono
 from auxiliary_module import generate_training_data,set_shape
 
 
-shape = (20,15)
+shape = (50,45)
 size = shape[0] * shape[1]
 nonogram_frame_version = 2
 if nonogram_frame_version == 1:
@@ -59,13 +59,13 @@ data,targets = convert_generated_data_to_data_frames(
 
 set_shape(shape)
 template = make_empty_nonogram()
-template[:10,:8] = np.full((10,8),1)
+#template[:30,:20] = np.full((30,20),1)
 data,targets = generate_training_data(10_000,template=template)
 
 # needed due to possible differences in scales
 # (although the effect would not be as pronounced in our case)
-data = normalize(data)
-data = scale(data)
+#data = normalize(data)
+#data = scale(data)
 
 pca.fit(data)
 cumsum = np.cumsum(pca.explained_variance_ratio_)
