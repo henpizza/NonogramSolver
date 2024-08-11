@@ -68,62 +68,54 @@ class LogCallback(keras.callbacks.Callback):
         print(f'Epoch: {epoch},   loss: {losses:.2f},   val_loss: {val_losses:.2f},   accuracy: {accuracy:.2f},   val_accuracy: {val_accuracy:.2f}')
 
 
-while (try_again):
-    reset_weights(model)
 
-    while True:
-        data,target = generate_training_data(s.num)
-        target = target.to_numpy()
-        target_out = []
-        #target_out = np.vstack()
-        for i in range(s.size):
-            target_out.append(target[:,i])
-        norm_layer.adapt(data.to_numpy())
-        
-        #reshape = (int(np.ceil(shape[1]/2))*shape[0]+int(np.ceil(shape[0]/2))*shape[1])
-        #target = target.reshape()
-        #print(np.array(target_out))
-        #exit(0)
-        hist = model.fit(data,target_out,epochs=s.n_epochs,validation_split=s.validation_split,
-            callbacks=[LogCallback(),
-                keras.callbacks.EarlyStopping(
-                    'val_loss',min_delta=s.min_delta,patience=s.early_stop_patience,restore_best_weights=True
-                )],
-            verbose = 1) # silent = 0, default = "auto"
-        break
-        if ((hist.history['val_binary_accuracy'][-1] > early_stop_accuracy)
-            or (len(hist.history['loss']) < early_stop_patience+3)):
-                break
+while True:
+    data,target = generate_training_data(s.num)
+    target = target.to_numpy()
+    target_out = []
+    #target_out = np.vstack()
+    for i in range(s.size):
+        target_out.append(target[:,i])
+    norm_layer.adapt(data.to_numpy())
     
-        
-    predict_proba = model.predict(test_data,verbose=0)
-    for i,proba in enumerate(predict_proba):
-        proba = proba[0][0]
-        row = i // s.shape[1]
-        col = i - row * s.shape[1]
-        nonogram[row,col] = int(round(proba))
-        nonogram_certainty[row,col] = (max(proba,1-proba)-1/2)*2
-        nonogram_accuracy[row,col] = hist.history[f'val_{i+1}_out_binary_accuracy'][-1]
+    #reshape = (int(np.ceil(shape[1]/2))*shape[0]+int(np.ceil(shape[0]/2))*shape[1])
+    #target = target.reshape()
+    #print(np.array(target_out))
+    #exit(0)
+    hist = model.fit(data,target_out,epochs=s.n_epochs,validation_split=s.validation_split,
+        callbacks=[LogCallback(),
+            keras.callbacks.EarlyStopping(
+                'val_loss',min_delta=s.min_delta,patience=s.early_stop_patience,restore_best_weights=True
+            )],
+        verbose = 0) # silent = 0, default = "auto"
+    break
+    if ((hist.history['val_binary_accuracy'][-1] > early_stop_accuracy)
+        or (len(hist.history['loss']) < early_stop_patience+3)):
+            break
 
-    print()
-    print('Accuracy')
-    with np.printoptions(precision=2,suppress=True):
-        print(nonogram_accuracy)
-    print()
-    print('Certainty')
-    with np.printoptions(precision=2,suppress=True):
-        print(nonogram_certainty)
-    print()
-    print('Answer')
-    print(nonogram)
-    print()
-    print('Right answer')
-    print(answer)
-    print()
-    print('Number of correctly guessed fields: ', np.sum(nonogram == answer), '/', s.size)
+    
+predict_proba = model.predict(test_data,verbose=0)
+for i,proba in enumerate(predict_proba):
+    proba = proba[0][0]
+    row = i // s.shape[1]
+    col = i - row * s.shape[1]
+    nonogram[row,col] = int(round(proba))
+    nonogram_certainty[row,col] = (max(proba,1-proba)-1/2)*2
+    nonogram_accuracy[row,col] = hist.history[f'val_{i+1}_out_binary_accuracy'][-1]
 
-    print('Should we try again? (y/n)',end=' ')
-    if (input() != 'y'):
-        try_again = False
-    else:
-        nonogram = make_empty_nonogram(s.shape)
+print()
+print('Accuracy')
+with np.printoptions(precision=2,suppress=True):
+    print(nonogram_accuracy)
+print()
+print('Certainty')
+with np.printoptions(precision=2,suppress=True):
+    print(nonogram_certainty)
+print()
+print('Answer')
+print(nonogram)
+print()
+print('Right answer')
+print(answer)
+print()
+print('Number of correctly guessed fields: ', np.sum(nonogram == answer), '/', s.size)

@@ -1,7 +1,9 @@
 # NonogramSolver
 
-Alpha version (commit no. 13).
+Alpha version (commit no. 14).
+
 Please use the `main.py` file.
+If it is run, the instructions for use will be shown
 
 This commit mainly adds the `keras_tuner.py` that will be used to find the best hyperparameters.
 
@@ -70,11 +72,11 @@ I was allowed a bigger diversity of approaches.
 (The Keras API is more convenient than scikit-learn API for multidimensional output.)
 
 What I have tried so far:
-- [Guessing one field per iteration](testing_scripts/nn_keras_field_test_one_field.py):
+- [Guessing one field per iteration](testing_scripts/nn_one_field.py):
   Always make the most auspicious guess and then retrain the model.
-- [Guessing fields with high enough certainty](testing_scripts/nn_keras_field_test_proba.py):
+- [Guessing fields with high enough certainty](testing_scripts/nn_proba.py):
   Similar to the previous one, but faster (although possibly less accurate).
-- [Simply training a model until accuracy is high enough](testing_scripts/nn_keras_field_test_simple.py):
+- [Simply training a model until accuracy is high enough](testing_scripts/nn_simple.py):
   Try to guess the entire nonogram in one go.
 
 ### Results:
@@ -102,9 +104,9 @@ regardless of the amount of padding.
 - Normalization()'s adapt has to have numpy array as data.
   Pandas will fail.
 
-- `nn_..._one_field.py` is successful with small nonograms.
+- `nn_one_field.py` is successful with small nonograms.
 
-- `nn_..._simple.py` is so far unable to guess the entire nonogram correctly.
+- `nn_simple.py` is so far unable to guess the entire nonogram correctly.
 
 - Simply changing the data with PCA does not influence the results significantly.
 However, no dimensionality reduction was involved, since the input dimensions would be changed.

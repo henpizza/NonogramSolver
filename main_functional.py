@@ -83,6 +83,24 @@ Explanations:
 No other settings are currently supported.
 '''
 
+# Custom callback
+class LogCallback(keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, logs=None):
+        losses = []
+        val_losses = []
+        accuracy = []
+        val_accuracy = []
+        for i in range(1,size+1):
+            accuracy.append(logs[f'{i}_out_binary_accuracy'])
+            val_accuracy.append(logs[f'val_{i}_out_binary_accuracy'])
+        losses.append(logs['loss'])
+        val_losses.append(logs['val_loss'])
+        losses = sum(losses)/size
+        val_losses = sum(val_losses)/size
+        accuracy = sum(accuracy)/size
+        val_accuracy = sum(val_accuracy)/size
+        print(f'Epoch: {epoch},   loss: {losses:.2f},   val_loss: {val_losses:.2f},   accuracy: {accuracy:.2f},   val_accuracy: {val_accuracy:.2f}')
+
 # Print help
 if len(argv) == 1:
     print(HELP)
@@ -109,8 +127,8 @@ if '--help' in argv or '-h' in argv:
 has_filters = False
 n_neurons = 500
 n_filters = 200
-n_layers = 2
-training_data_size = 30_000
+n_layers = 1
+training_data_size = 5_000
 
 is_file_loaded = False
 out_filename = None
@@ -191,35 +209,64 @@ n_epochs = 1_000
 activation = keras.activations.relu
 early_stop_patience = 5
 min_delta = 1e-5
-verbose = 0
 
 # Make the model
-model = keras.Sequential()
-model.add(keras.layers.Input(shape=[1,n_dimensions]))
+input_layer = keras.layers.Input(shape=[1,n_dimensions])
+x = input_layer
 if (has_filters):
-    model.add(keras.layers.Conv1D(n_filters,max(shape[0],shape[1]),padding="same"))
-model.add(keras.layers.Flatten())
+    x = keras.layers.Conv1D(n_filters,max(shape[0],shape[1]),padding="same")(x)
+x = keras.layers.Flatten()(x)
 for _ in range(n_layers):
-    model.add(keras.layers.Dense(n_neurons,activation=activation))
-model.add(keras.layers.Dense(size,activation=keras.activations.sigmoid))
+    x = keras.layers.Dense(n_neurons,activation=activation)(x)
+# The last layer has to have as many outputs as "layers" if we want accuracy not to be averaged over all outputs
+outputs = []
+loss_dict = {}
+metrics_dict = {}
+for i in range(1,size+1):
+    outputs.append(keras.layers.Dense(1,activation=keras.activations.sigmoid,name=f'{i}_out')(x))
+    loss_dict.update({f'{i}_out' : 'binary_crossentropy'})
+    metrics_dict.update({f'{i}_out' : 'binary_accuracy'})
+model = keras.Model(inputs=input_layer,outputs=outputs)
 model.compile(
     optimizer=keras.optimizers.Adam(beta_2=0.99),
-    loss=keras.losses.BinaryCrossentropy(),
-    metrics=[keras.metrics.BinaryAccuracy()])
+    loss=loss_dict,
+    metrics=metrics_dict)
 
 def fit(data,target):
     data,data_val,target,target_val = train_test_split(data,target,test_size=0.1)
+    # 
+    target = target.to_numpy()
+    target_out = []
+    #target_out = np.vstack()
+    for i in range(size):
+        target_out.append(target[:,i].view())
+    target = target_out
+    #
+    target_val = target_val.to_numpy()
+    target_out = []
+    #target_out = np.vstack()
+    for i in range(size):
+        target_out.append(target_val[:,i].view())
+    target_val = target_out
+    #
+    '''
+    target = target.to_numpy()
+    target_val = target_val.to_numpy()
+    target = target.T.reshape((size,1,target.shape[0])).T
+    target_val = target_val.T.reshape((size,1,target_val.shape[0])).T
+    '''
     hist = model.fit(data,target,epochs=n_epochs,
         validation_data=[data_val,target_val],
-        callbacks=[
+        callbacks=[LogCallback(),
             keras.callbacks.EarlyStopping(
             'val_loss',min_delta=min_delta,patience=early_stop_patience,restore_best_weights=True
             )],
-        verbose = verbose)
+        verbose = 0)
     return hist
 
 input_data = input_data.to_numpy().reshape((input_data.shape[0],1,input_data.shape[1]))
 nonogram = make_empty_nonogram()
+nonogram_accuracy = make_empty_nonogram().astype(float)
 n_to_guess = size
 
 
@@ -229,9 +276,15 @@ for _ in range(max_n_iter):
         break
     data,target = generate_training_data(training_data_size,template=nonogram)
     data = data.to_numpy().reshape((data.shape[0],1,data.shape[1]))
-    fit(data,target)
+    hist = fit(data,target)
 
     predict_proba = model.predict(input_data,verbose=0)[0]
+    predict_proba = predict_proba.flatten()
+    for i in range(size):
+        row = i // shape[1]
+        col = i - row * shape[1]
+        nonogram_accuracy[row,col] = hist.history[f'val_{i+1}_out_binary_accuracy'][-1]
+    print(nonogram_accuracy)
     max_row,max_col = keras_nonogram_max_proba_fill(predict_proba,nonogram)
     n_to_guess -= 1
 
@@ -270,3 +323,4 @@ if out_filename is not None:
                 else:
                     print('[grey78]0[/grey78] ',end=' ',file=out_file)
             print(file=out_file)
+
