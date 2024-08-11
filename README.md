@@ -1,6 +1,6 @@
 # NonogramSolver
 
-Alpha version (commit no. 12).
+Alpha version (commit no. 13).
 Please use the `main.py` file.
 
 This commit mainly adds the `keras_tuner.py` that will be used to find the best hyperparameters.

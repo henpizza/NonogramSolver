@@ -4,6 +4,7 @@ Run the file with python to show how the program should be used.
 '''
 
 import keras
+import numpy as np
 from rich import print
 from rich import text
 import rich
@@ -21,6 +22,7 @@ HELP = \
 '''Usage:
 [green]main.py [FILE] [--settings or -s SETTINGS]
     [--help or -h [help_file]]
+    [--out or -o output_file]
 [/green]
 [green]FILE[/green] - Input file.
 [green]SETTINGS[/green] - Optional file with settings.
@@ -56,6 +58,7 @@ SETTINGS_HELP = \
 '''Example 'settings' file:
 \t---BEGIN---[green]
 n_neurons=1_000
+has_filters=True
 n_filters=10
 n_layers=1
 training_data_size=10_000
@@ -71,6 +74,7 @@ The program uses the following model:
 - Output
 
 Explanations:
+[green]has_filters[/green] - Whether to use filters or not (default is True)
 [green]n_filters[/green] - Number of filters in the Conv1D layer
 [green]n_neurons[/green] - Number of neurons per layer (by default only one layer is used)
 [green]n_layers[/green] - Number of dense layers
@@ -107,6 +111,9 @@ n_filters = 20
 n_layers = 1
 training_data_size = 10_000
 
+is_file_loaded = False
+out_filename = None
+
 # Process argv
 argv_index = 1
 while argv_index < len(argv):
@@ -127,6 +134,8 @@ while argv_index < len(argv):
                         print(SETTINGS_HELP)
                         print("[red]ERROR:[/red] Invalid settings file.")
                     match setting:
+                        case 'has_filters':
+                            has_filters = False if val == 'False' else True
                         case 'n_neurons':
                             n_neurons = int(val)
                         case 'n_filters':
@@ -135,11 +144,20 @@ while argv_index < len(argv):
                             n_layers = int(val)
                         case 'training_data_size':
                             training_data_size = int(val)
+        case x if x in ('-o','--output'):
+            next_argv = argv[argv_index]
+            argv_index += 1
+            out_filename = next_argv
         case _:
             try:
-                set_shape_from_file(cur_argv)
-                input_data = convert_to_nonogram_frame2([cur_argv])
-                print('File ' + cur_argv + ' was read successfully')
+                if not is_file_loaded:
+                    set_shape_from_file(cur_argv)
+                    input_data = convert_to_nonogram_frame2([cur_argv])
+                    print('File ' + cur_argv + ' was read successfully')
+                    is_file_loaded = True
+                else:
+                    print("[red]ERROR:[/red] Only one input file is currently supported.")
+                    exit(1)
             except FileNotFoundError:
                 print(HELP)
                 print(f"[red]ERROR:[/red] File '{cur_argv}' not found.")
@@ -172,12 +190,13 @@ n_epochs = 1_000
 activation = keras.activations.relu
 early_stop_patience = 5
 min_delta = 1e-5
-verbose = 1
+verbose = 0
 
 # Make the model
 model = keras.Sequential()
 model.add(keras.layers.Input(shape=[1,n_dimensions]))
 model.add(keras.layers.Conv1D(n_filters,max(shape[0],shape[1]),padding="same"))
+model.add(keras.layers.Flatten())
 for _ in range(n_layers):
     model.add(keras.layers.Dense(n_neurons,activation=activation))
 model.add(keras.layers.Dense(size,activation=keras.activations.sigmoid))
@@ -208,23 +227,46 @@ for _ in range(max_n_iter):
         break
     data,target = generate_training_data(training_data_size,template=nonogram)
     data = data.to_numpy().reshape((data.shape[0],1,data.shape[1]))
-    target = target.to_numpy().reshape((target.shape[0],1,target.shape[1]))
     fit(data,target)
 
-    predict_proba = model.predict(input_data,verbose=0)[0][0]
+    predict_proba = model.predict(input_data,verbose=0)[0]
     max_row,max_col = keras_nonogram_max_proba_fill(predict_proba,nonogram)
     n_to_guess -= 1
 
     print()
+    for line in nonogram:
+        for num in line:
+            if num == 1:
+                print('[red]1[/red]',end=' ')
+            elif num == 0:
+                print('[blue]0[/blue]', end=' ')
+            else:
+                print('[grey78]X[/grey78]',end=' ')
+        print()
+    print("Guessed " + str(nonogram[max_row,max_col]))
     print(max_row+1,max_col+1,f'({n_to_guess} more to fill)')
     print()
 
 # Print the answer
-print('Answer')
+print('[blue]===================[/blue]')
+print('[blue]Answer[/blue]')
 for line in nonogram:
     for num in line:
         if num == 1:
             print('[red]1[/red]',end=' ')
+        elif num == 0:
+            print('[blue]0[/blue]',end=' ')
         else:
-            print('[grey78]0[/grey78]', end=' ')
+            print('[grey78]X[/grey78]', end=' ')
     print()
+
+# Print output to file
+if out_filename is not None:
+    with open(out_filename,'w') as out_file:
+        for line in nonogram:
+            for num in line:
+                if num == 1:
+                    print('[red]1[/red]',end=' ',file=out_file)
+                else:
+                    print(' ',end=' ',file=out_file)
+            print(file=out_file)

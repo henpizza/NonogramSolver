@@ -17,6 +17,8 @@ from sys import exit
 from warnings import simplefilter
 simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 
+from auxiliary_module.deprecated import NonogramFrame
+
 
 
 
@@ -46,34 +48,6 @@ max_num_of_sequences_in_row = 0
 max_num_of_sequences_in_column = 0
 
 
-
-class NonogramFrame(pd.DataFrame):
-    """
-    (This class might be deprecated in the future.)
-
-    The class creates a pandas.DataFrame with the following columns:
-        - row/col_i_total - The total number of filled fields in row/column i.
-        - row/col_i_spaces - The total number of spaces
-
-    Parameters
-    ----------
-    shape : tuple, optional
-        Shape of the nonogram. The initializer expects a 2-tuple in the form (num_of_rows,num_of_cols).
-        If set with the set_shape() function, the shape need not be specified as an argument.
-
-    """
-    def __init__(self, shape: tuple = None):
-        if (shape is None):
-            shape = get_shape()
-        super().__init__(columns = ())
-        for k in range(1,shape[0]+1):
-            self['row_' + str(k) + '_total'] = np.nan
-            self['row_' + str(k) + '_spaces'] = np.nan
-            #self['row_' + str(k) + '_max'] = np.nan # this does not seem to help
-        for k in range(1,shape[1]+1):
-            self['col_' + str(k) + '_total'] = np.nan
-            self['col_' + str(k) + '_spaces'] = np.nan
-            #self['col_' + str(k) + '_max'] = np.nan
 
 
 class NonogramFrame2(pd.DataFrame):
@@ -429,7 +403,7 @@ def generate_nonogram_data(shape: tuple = None, num: int = 500, template: np.arr
 
 @njit
 def _generate_nonogram_data_instance(shape: tuple, max_num_of_sequences_in_row,max_num_of_sequences_in_column,
-    template: np.array = None) -> tuple[np.array,np.array]:
+    template: np.array = np.array([[]])) -> tuple[np.array,np.array]:
     """
     INTERNAL FUNCTION. Please use generate_training_data instead.
 
@@ -465,6 +439,9 @@ def _generate_nonogram_data_instance(shape: tuple, max_num_of_sequences_in_row,m
             if nonogram[i,j] == UNKNOWN:
                 # Equivalent to choice(NOT_FILLED,FILLED)
                 nonogram[i,j] = np.random.randint(0,1+1)
+                # This does not work for some reason
+                #nonogram[i,j] = np.random.choice(NOT_FILLED,FILLED)
+                
 
     # Compute data for NonogramFrame2
     rows_out = np.full(shape[0]*max_num_of_sequences_in_row,0)
@@ -505,7 +482,7 @@ def _generate_nonogram_data_instance(shape: tuple, max_num_of_sequences_in_row,m
 @njit
 def _generate_training_data(num:int, shape:tuple,
     n_dimensions, size, max_num_of_sequences_in_row, max_num_of_sequences_in_column,
-    template: np.array=None, seed: int=None) -> tuple[np.array,np.array]:
+    template: np.array=np.array([[]]), seed: int=None) -> tuple[np.array,np.array]:
     """
     INTERNAL FUNCTION. Please use generate_training_data instead.
 
@@ -639,6 +616,18 @@ def make_empty_nonogram(shape: tuple = None) -> np.array:
         shape = get_shape()
     return np.full(shape, UNKNOWN)
 
+
+# Thanks to mikefenton (https://github.com/numba/numba/issues/2539)
+@njit
+def rand_choice_nb(arr, prob):
+    """
+    This is an njit-compatible substitute for np.random.choice.
+
+    :param arr: A 1D numpy array of values to sample from.
+    :param prob: A 1D numpy array of probabilities for the given samples.
+    :return: A random sample from the given array with a given probability.
+    """
+    return arr[np.searchsorted(np.cumsum(prob), np.random.random(), side="right")]
 
 
 def set_shape(shape_: tuple[int,int]) -> None:

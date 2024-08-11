@@ -100,6 +100,7 @@ def _keras_nonogram_max_proba_fill(predict_proba: np.array, nonogram: np.array, 
     nonogram[max_row,max_col] = max_val
     return max_row,max_col
 
+
 def keras_nonogram_max_proba_fill(predict_proba: np.array, nonogram: np.array) -> tuple[int,int]:
     """
     For very large nonograms, it takes a long time to fill a field.
