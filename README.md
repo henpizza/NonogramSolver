@@ -3,7 +3,7 @@
 Alpha version (commit no. 14).
 
 Please use the `main.py` file.
-If it is run, the instructions for use will be shown
+When it is run, the instructions for use will be shown
 
 This commit mainly adds the `keras_tuner.py` that will be used to find the best hyperparameters.
 

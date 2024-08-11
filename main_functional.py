@@ -127,7 +127,7 @@ if '--help' in argv or '-h' in argv:
 has_filters = False
 n_neurons = 500
 n_filters = 200
-n_layers = 1
+n_layers = 2
 training_data_size = 5_000
 
 is_file_loaded = False
@@ -278,14 +278,13 @@ for _ in range(max_n_iter):
     data = data.to_numpy().reshape((data.shape[0],1,data.shape[1]))
     hist = fit(data,target)
 
-    predict_proba = model.predict(input_data,verbose=0)[0]
+    predict_proba = np.array(model.predict(input_data,verbose=0))
     predict_proba = predict_proba.flatten()
     for i in range(size):
         row = i // shape[1]
         col = i - row * shape[1]
         nonogram_accuracy[row,col] = hist.history[f'val_{i+1}_out_binary_accuracy'][-1]
-    print(nonogram_accuracy)
-    max_row,max_col = keras_nonogram_max_proba_fill(predict_proba,nonogram)
+    max_row,max_col = keras_nonogram_max_proba_fill(predict_proba,nonogram,nonogram_accuracy)
     n_to_guess -= 1
 
     print()
