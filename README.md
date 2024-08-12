@@ -3,14 +3,22 @@
 Alpha version (commit no. 14).
 
 Please use the `main.py` file.
-When it is run, the instructions for use will be shown
+When it is run, the instructions for use will be shown.
 
-This commit mainly adds the `keras_tuner.py` that will be used to find the best hyperparameters.
+### The algorithm
+1. Train the model on generated data that are based on the current state of the nonogram.
+2. Find the field the model is most certain about and fill it with a value.
+3. Repeat
 
-The results gained so far with neural networks are preliminary.
+<pre>
 
-Important: normalisation damages the information contained in the data.
 
+
+
+
+
+
+</pre>
 
 ## Logistic regression and other relevant information
 for `logistic_regression_test.py` [here](testing_scripts/logistic_regression_test.py)
@@ -110,6 +118,10 @@ regardless of the amount of padding.
 
 - Simply changing the data with PCA does not influence the results significantly.
 However, no dimensionality reduction was involved, since the input dimensions would be changed.
+
+- Convolutions are very important.
+
+- Tried the functional API in the dev branch. It seems to be comparatively slow.
 
 
 _Addendum_:

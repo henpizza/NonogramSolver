@@ -74,11 +74,11 @@ The program uses the following model:
 - Output
 
 Explanations:
-[green]has_filters[/green] - Whether to use filters (Conv1D layer) or not (default is False)
+[green]has_filters[/green] - Whether to use filters (Conv1D layer) or not (default is True)
 [green]n_filters[/green] - Number of filters in the Conv1D layer
-[green]n_neurons[/green] - Number of neurons per layer (by default only one layer is used)
-[green]n_layers[/green] - Number of dense layers
-[green]training_data_size[/green] - Size of the training data that will be generated before each guess of a field
+[green]n_neurons[/green] - Number of neurons per layer
+[green]n_layers[/green] - Number of dense layers (by default only one layer is used)
+[green]training_data_size[/green] - Size of the training data that will be generated before each guess of a field (default: 30_000)
 
 No other settings are currently supported.
 '''
@@ -106,8 +106,8 @@ if '--help' in argv or '-h' in argv:
         print(HELP)
     sys.exit(0)
 
-has_filters = False
-n_neurons = 500
+has_filters = True
+n_neurons = 200
 n_filters = 200
 n_layers = 2
 training_data_size = 30_000
@@ -180,6 +180,13 @@ while argv_index < len(argv):
                 print("Please make sure that a single '-' is between the row and column sections and below the second (column) section.")
                 exit(1)
 
+print("Settings:")
+print(f"{has_filters=}")
+print(f"{n_filters=}")
+print(f"{n_layers=}")
+print(f"{n_neurons=}")
+print(f"{training_data_size=}")
+
 # Define constants
 max_n_iter = 10_000
 shape = get_shape()
@@ -198,10 +205,10 @@ model = keras.Sequential()
 model.add(keras.layers.Input(shape=[1,n_dimensions]))
 if (has_filters):
     model.add(keras.layers.Conv1D(n_filters,max(shape[0],shape[1]),padding="same"))
-model.add(keras.layers.Flatten())
 for _ in range(n_layers):
     model.add(keras.layers.Dense(n_neurons,activation=activation))
 model.add(keras.layers.Dense(size,activation=keras.activations.sigmoid))
+model.add(keras.layers.Flatten())
 model.compile(
     optimizer=keras.optimizers.Adam(beta_2=0.99),
     loss=keras.losses.BinaryCrossentropy(),

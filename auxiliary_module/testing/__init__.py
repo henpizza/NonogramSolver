@@ -68,42 +68,6 @@ def reset_weights(model) -> None:
 
 
 @njit
-def _keras_nonogram_max_proba_fill_with_accuracy(predict_proba: np.array, nonogram: np.array, shape: tuple[int,int],accuracy) -> tuple[int,int]:
-    """
-    INTERNAL FUNCTION. Please use keras_nonogram_max_proba_fill instead.
-
-    Parameters
-    ----------
-    predict_proba
-        Probability output by Keras for one nonogram.
-        (If only one prediction was made, do not forget that the output of model.predict is a 2D array.)
-    nonogram: np.array
-        The nonogram that will have one field filled.
-
-    Returns
-    -------
-    tuple[int,int]
-
-    """
-    max_ = 0
-    max_row = 0
-    max_col = 0
-    max_val = 0
-    for i,x in enumerate(predict_proba):
-        row = i // shape[1]
-        col = i - row*shape[1]
-        tmp = max(x,1-x)
-        tmp = np.sqrt(tmp**2 + accuracy[row,col]**2)
-        if nonogram[row,col] == -1 and tmp > max_:
-            max_ = tmp
-            max_val = int(round(x))
-            max_row = row
-            max_col = col
-    nonogram[max_row,max_col] = max_val
-    return max_row,max_col
-
-
-@njit
 def _keras_nonogram_max_proba_fill(predict_proba: np.array, nonogram: np.array, shape: tuple[int,int]) -> tuple[int,int]:
     """
     INTERNAL FUNCTION. Please use keras_nonogram_max_proba_fill instead.
@@ -137,7 +101,7 @@ def _keras_nonogram_max_proba_fill(predict_proba: np.array, nonogram: np.array, 
     return max_row,max_col
 
 
-def keras_nonogram_max_proba_fill(predict_proba: np.array, nonogram: np.array, accuracy: np.array = None) -> tuple[int,int]:
+def keras_nonogram_max_proba_fill(predict_proba: np.array, nonogram: np.array) -> tuple[int,int]:
     """
     For very large nonograms, it takes a long time to fill a field.
     This function addresses this issue with the help of numba.
@@ -156,8 +120,5 @@ def keras_nonogram_max_proba_fill(predict_proba: np.array, nonogram: np.array, a
 
     """
     shape = get_shape()
-    if accuracy is None:
-        max_row,max_col = _keras_nonogram_max_proba_fill(predict_proba,nonogram,shape)
-    else:
-        max_row,max_col = _keras_nonogram_max_proba_fill_with_accuracy(predict_proba,nonogram,shape,accuracy=accuracy)
+    max_row,max_col = _keras_nonogram_max_proba_fill(predict_proba,nonogram,shape)
     return max_row,max_col
