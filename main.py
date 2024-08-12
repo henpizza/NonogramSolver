@@ -59,9 +59,11 @@ SETTINGS_HELP = \
 \t---BEGIN---[green]
 n_neurons=1_000
 has_filters=True
+learning_rate_exp=3
 n_filters=10
 n_layers=1
 training_data_size=10_000
+verbose=False
 [/green]\t---END---
 
 The program uses the following model:
@@ -75,10 +77,12 @@ The program uses the following model:
 
 Explanations:
 [green]has_filters[/green] - Whether to use filters (Conv1D layer) or not (default is True)
+[green]learning_rate_exp[/green] - Learning rate is set to 10**(-learning_rate_exp)
 [green]n_filters[/green] - Number of filters in the Conv1D layer
 [green]n_neurons[/green] - Number of neurons per layer
 [green]n_layers[/green] - Number of dense layers (by default only one layer is used)
 [green]training_data_size[/green] - Size of the training data that will be generated before each guess of a field (default: 30_000)
+[grren]verbose[/green] - How verbose the Keras's output should be. True is equivalent to 1 in Keras.
 
 No other settings are currently supported.
 '''
@@ -107,10 +111,12 @@ if '--help' in argv or '-h' in argv:
     sys.exit(0)
 
 has_filters = True
-n_neurons = 200
-n_filters = 200
-n_layers = 2
-training_data_size = 30_000
+learning_rate_exp = 3
+n_neurons = 500
+n_filters = 100
+n_layers = 1
+training_data_size = 5_000
+verbose = False
 
 is_file_loaded = False
 out_filename = None
@@ -137,6 +143,8 @@ while argv_index < len(argv):
                     match setting:
                         case 'has_filters':
                             has_filters = False if val == 'False' else True
+                        case 'learning_rate_exp':
+                            learning_rate_exp = int(val)
                         case 'n_neurons':
                             n_neurons = int(val)
                         case 'n_filters':
@@ -145,6 +153,8 @@ while argv_index < len(argv):
                             n_layers = int(val)
                         case 'training_data_size':
                             training_data_size = int(val)
+                        case 'verbose':
+                            verbose = False if val == 'False' else True
         case x if x in ('-o','--output'):
             next_argv = argv[argv_index]
             argv_index += 1
@@ -182,6 +192,7 @@ while argv_index < len(argv):
 
 print("Settings:")
 print(f"{has_filters=}")
+print(f"{learning_rate_exp=}")
 print(f"{n_filters=}")
 print(f"{n_layers=}")
 print(f"{n_neurons=}")
@@ -197,8 +208,11 @@ n_epochs = 1_000
 #learning_rate = 0.01
 activation = keras.activations.relu
 early_stop_patience = 5
-min_delta = 1e-5
-verbose = 0
+min_delta = 1e-7
+if verbose:
+    verbose = 1
+else:
+    verbose = 0
 
 # Make the model
 model = keras.Sequential()
@@ -210,7 +224,7 @@ for _ in range(n_layers):
 model.add(keras.layers.Dense(size,activation=keras.activations.sigmoid))
 model.add(keras.layers.Flatten())
 model.compile(
-    optimizer=keras.optimizers.Adam(beta_2=0.99),
+    optimizer=keras.optimizers.Adam(beta_2=0.99,learning_rate=10**(-learning_rate_exp)),
     loss=keras.losses.BinaryCrossentropy(),
     metrics=[keras.metrics.BinaryAccuracy()])
 
@@ -243,10 +257,13 @@ for _ in range(max_n_iter):
     n_to_guess -= 1
 
     print()
-    for line in nonogram:
-        for num in line:
+    for row,line in enumerate(nonogram):
+        for col,num in enumerate(line):
             if num == 1:
-                print('[red]1[/red]',end=' ')
+                if row == max_row and col == max_col:
+                    print('[green]1[/green]',end=' ')
+                else:
+                    print('[red]1[/red]',end=' ')
             elif num == 0:
                 print('[blue]0[/blue]', end=' ')
             else:
