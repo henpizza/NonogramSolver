@@ -1,0 +1,6 @@
+has_filters=True
+learning_rate_exp=3
+n_neurons=500
+n_filters=100
+n_layers=1
+training_data_size=5_000

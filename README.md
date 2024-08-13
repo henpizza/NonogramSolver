@@ -1,6 +1,6 @@
 # NonogramSolver
 
-Alpha version (commit no. 14).
+Alpha version (commit no. 16).
 
 Please use the `main.py` file.
 When it is run, the instructions for use will be shown.
@@ -123,6 +123,9 @@ However, no dimensionality reduction was involved, since the input dimensions wo
 
 - Tried the functional API in the dev branch. It seems to be comparatively slow.
 
+- Simply training the same model several times (as a form of ensemble learning) helps only marginally.
+I might have to introduce some form of "forgetting" or the possibility of having different models.
+
 
 _Addendum_:
   In commit no. 9 I wrote:
@@ -222,6 +225,7 @@ I could perhaps make one large model for very large nonograms and use
 the deep layers as starting point for every smaller shape.
 But perhaps it would not be usable due to normalisation?
 
+- Try models with "forgetting".
 
 
 

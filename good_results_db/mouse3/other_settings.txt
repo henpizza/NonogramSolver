@@ -1,0 +1,5 @@
+commit 13c0f0c49e2e5034a61b420ebf570b3a61d662fe
+min_delta = 1e-7
+early_stop_patience = 5
+activation = ReLU
+optimizer = Adam(beta2=0.99)
