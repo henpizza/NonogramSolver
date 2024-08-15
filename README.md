@@ -1,14 +1,17 @@
 # NonogramSolver
 
-Alpha version (commit no. 16).
+Alpha version (commit no. 17).
 
 Please use the `main.py` file.
 When it is run, the instructions for use will be shown.
 
 ### The algorithm
-1. Train the model on generated data that are based on the current state of the nonogram.
-2. Find the field the model is most certain about and fill it with a value.
-3. Repeat
+1. Train several models (the number being controlled by n_models) on generated data that are based on the current state of the nonogram.
+2. Find the fields the models agree upon and fill it with a value.
+3. If forgetting_enabled = True, let each model forget some fields (controlled by to_forget).
+4. Repeat
+
+A MILESTONE: The mouse.non was guessed entirely correctly! (see [here](good_results_db/mouse5_forgetting/))
 
 <pre>
 
@@ -125,6 +128,8 @@ However, no dimensionality reduction was involved, since the input dimensions wo
 
 - Simply training the same model several times (as a form of ensemble learning) helps only marginally.
 I might have to introduce some form of "forgetting" or the possibility of having different models.
+
+- Thanks to forgetting, the entire mouse.non nonogram was guessed correctly! (see [here](good_results_db/mouse5_forgetting/))
 
 
 _Addendum_:

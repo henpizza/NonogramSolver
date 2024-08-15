@@ -58,15 +58,18 @@ Insert an empty line for a row or a column with no 1s in it.
 SETTINGS_HELP = \
 '''Example 'settings' file:
 \t---BEGIN---[green]
-n_neurons=1_000
+forgetting_enabled=True
 has_filters=True
+interval_between_fillings=25
 learning_rate_exp=3
-n_filters=10
-n_models=3
 print_tmp_results=True
 print_tmp_frequency=10
+n_neurons=500
+n_filters=100
 n_layers=1
-training_data_size=10_000
+n_models=2
+to_forget=5
+training_data_size=5000
 verbose=False
 [/green]\t---END---
 
@@ -80,6 +83,7 @@ The program uses the following model(s):
 - Output
 
 Explanations:
+[green]forgetting_enabled[/green] - Whether to allow the models to forget some fields (also see to_forget)
 [green]has_filters[/green] - Whether to use filters (Conv1D layer) or not (default is True)
 [green]learning_rate_exp[/green] - Learning rate is set to 10**(-learning_rate_exp)
 [green]n_filters[/green] - Number of filters in the Conv1D layer
@@ -89,6 +93,7 @@ Explanations:
 [green]print_tmp_results[/green] - Whether to print intermediate results (also see print_tmp_frequency)
 [green]print_tmp_frequency[/green] - How often to print intermediate results. The value corresponds to the number of filled fields.
     (set print_tmp_results to True for this option to take effect.)
+[green]to_forget[/green] - How many fields to forget during each filling (needs forgetting_enabled=True)
 [green]training_data_size[/green] - Size of the training data that will be generated before each guess of a field (default: 30_000)
 [grren]verbose[/green] - How verbose the Keras's output should be. True is equivalent to 1 in Keras.
 
@@ -118,15 +123,19 @@ if '--help' in argv or '-h' in argv:
         print(HELP)
     sys.exit(0)
 
+# Default settings
+forgetting_enabled = True
 has_filters = True
+interval_between_fillings = 25#size // 5
 learning_rate_exp = 3
 n_neurons = 500
 n_filters = 100
 n_layers = 1
-n_models = 1
+n_models = 2
 print_tmp_results = True
-print_tmp_frequency = 10
-training_data_size = 5_000
+print_tmp_frequency = 5
+to_forget = 5
+training_data_size = 5000
 verbose = False
 
 is_file_loaded = False
@@ -154,6 +163,10 @@ while argv_index < len(argv):
                     match setting:
                         case 'has_filters':
                             has_filters = False if val.casefold() == 'false' else True
+                        case 'forgetting_enabled':
+                            forgetting_enabled = False if val.casefold() == 'false' else True
+                        case 'interval_between_fillings':
+                            interval_between_fillings = int(val)
                         case 'learning_rate_exp':
                             learning_rate_exp = int(val)
                         case 'n_models':
@@ -168,6 +181,8 @@ while argv_index < len(argv):
                             print_tmp_frequency = int(val)
                         case 'print_tmp_results':
                             print_tmp_results = True if val.casefold() == 'true' else False
+                        case 'to_forget':
+                            to_forget = int(val)
                         case 'training_data_size':
                             training_data_size = int(val)
                         case 'verbose':
@@ -208,13 +223,17 @@ while argv_index < len(argv):
                 print("Please make sure that a single '-' is between the row and column sections and below the second (column) section.")
                 exit(1)
 
+# Print current settings
 print("[yellow]Settings:[/yellow]")
+print(f"{forgetting_enabled=}")
 print(f"{has_filters=}")
+print(f"{interval_between_fillings=}")
 print(f"{learning_rate_exp=}")
 print(f"{n_filters=}")
 print(f"{n_models=}")
 print(f"{n_layers=}")
 print(f"{n_neurons=}")
+print(f"{to_forget=}")
 print(f"{training_data_size=}")
 print()
 
@@ -222,7 +241,9 @@ print()
 max_n_iter = 10_000
 shape = get_shape()
 n_dimensions,size = get_shape_info()
+rng = np.random.default_rng()
 
+# Define more constants
 validation_split = 0.1
 n_epochs = 1_000
 #learning_rate = 0.01
@@ -250,6 +271,7 @@ for i in range(n_models):
         loss=keras.losses.BinaryCrossentropy(),
         metrics=[keras.metrics.BinaryAccuracy()])
 
+# Convenience function
 def fit(data,target,model_index):
     model = models[model_index]
     data,data_val,target,target_val = train_test_split(data,target,test_size=0.1)
@@ -262,13 +284,13 @@ def fit(data,target,model_index):
         verbose = verbose)
     return hist
 
+
 # Define variables (and some related constants)
 input_data = input_data.to_numpy().reshape((input_data.shape[0],1,input_data.shape[1]))
 nonograms = [make_empty_nonogram() for _ in range(n_models)]
 nonogram_answer = make_empty_nonogram()
 n_to_guess = size
 n_to_guess_tmp = n_to_guess
-interval_between_fillings = size // 5
 iterations_left_until_filling = interval_between_fillings
 no_filling_tolerance = 2 
 no_filling_count = 0
@@ -281,6 +303,7 @@ for _ in range(max_n_iter):
     iterations_left_until_filling -= 1
     if (n_to_guess == 0):
         break
+    # Fill some fields for each model
     for model_index in range(n_models):
         nonogram = nonograms[model_index]
         model = models[model_index]
@@ -292,21 +315,26 @@ for _ in range(max_n_iter):
         keras_nonogram_max_proba_fill(predict_proba,nonogram)
     n_to_guess_tmp -= 1
 
+    # Make (almost) final decisions about which fields should be filled
     if n_to_guess_tmp == 0 or iterations_left_until_filling == 0:
         no_filling_count += 1 # This is nullified if a field is filled during an iteration.
         print_tmp_counter = 0
         iterations_left_until_filling = interval_between_fillings
         colored_fields = []
+        filled_fields = [] # for forgetting
+        forgotten_fields = []
         print()
         # Fill if all models agree on a value
         for row in range(shape[0]):
             for col in range(shape[1]):
                 if nonogram_answer[row,col] != UNKNOWN:
+                    filled_fields.append((row,col))
                     continue
                 val = nonograms[0][row,col]
                 if n_models == 1:
                     if val != UNKNOWN:
                         nonogram_answer[row,col] = val
+                        filled_fields.append((row,col))
                         colored_fields.append((row,col))
                         n_to_guess -= 1
                     no_filling_count = 0 # This variable is used meaningfully only if n_models > 1
@@ -319,6 +347,7 @@ for _ in range(max_n_iter):
                     if same_value:
                         nonogram_answer[row,col] = val
                         print("Guessed " + str(val) + " at " + str(row+1) + " " + str(col+1))
+                        filled_fields.append((row,col))
                         colored_fields.append((row,col))
                         no_filling_count = 0
                         n_to_guess -= 1
@@ -337,6 +366,7 @@ for _ in range(max_n_iter):
                                 nonogram_answer[row,col] = nonogram[row,col]
                                 print("Guessed " + str(nonogram_answer[row,col]) + " at " + str(row+1) + " " + str(col+1))
                                 colored_fields.append((row,col))
+                                filled_fields.append((row,col))
                                 n_to_guess -= 1
                                 break_loops = True
                                 break
@@ -344,6 +374,28 @@ for _ in range(max_n_iter):
                         break
                 if (break_loops):
                     break
+        
+        # Reset the models' nonograms such that they are the same as nonogram_answer
+        if n_models > 1:
+            for model_index in range(n_models):
+                nonograms[model_index] = nonogram_answer.copy()
+            n_to_guess_tmp = n_to_guess
+        
+        # This enables the models to correct their mistakes
+        if forgetting_enabled and n_to_guess > 0:
+            for model_index,nonogram in enumerate(nonograms):
+                for _ in range(to_forget):
+                    row,col = rng.choice(filled_fields)
+                    while nonogram[row,col] == UNKNOWN:
+                        row,col = rng.choice(filled_fields)
+                    nonogram[row,col] = UNKNOWN
+                    if nonogram_answer[row,col] != UNKNOWN:
+                        n_to_guess += 1
+                        print(f"Forgotten {nonogram_answer[row,col]} at {row+1} {col+1} (model {model_index})")
+                        nonogram_answer[row,col] = UNKNOWN
+                        forgotten_fields.append((row,col))
+            n_to_guess_tmp += to_forget
+            n_to_guess_tmp = min(n_to_guess_tmp,size)
 
         print(f'({n_to_guess} more to fill)')
 
@@ -361,15 +413,13 @@ for _ in range(max_n_iter):
                     else:
                         print('[blue]0[/blue]', end=' ')
                 else:
-                    print('[grey78]X[/grey78]',end=' ')
+                    if (row,col) in forgotten_fields:
+                        print('[yellow]X[yellow]',end=' ')
+                    else:
+                        print('[grey78]X[/grey78]',end=' ')
             print()
         print()
-        
-        # Reset the models' nonograms such that they are the same as nonogram_answer
-        if n_models > 1:
-            for model_index in range(n_models):
-                nonograms[model_index] = nonogram_answer.copy()
-            n_to_guess_tmp = n_to_guess
+
 
     # Print temporary results (not confirmed and will possibly not appear in nonogram_answer)
     elif print_tmp_results and print_tmp_counter >= print_tmp_frequency and n_models > 1:

@@ -1,0 +1,2 @@
+There was a small bug in the program that caused an infinite loop at the end,
+but it was unimportant and obviously otherwise the nonogram was filled entirely correctly.
